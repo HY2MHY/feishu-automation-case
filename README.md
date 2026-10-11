@@ -1,89 +1,32 @@
-# Case Study — AI-Native Operations at an E-Commerce Media Agency
+# Feishu operations automation — anonymized case study
 
-**Internship · May–Aug 2026 · AI-native data operations** (details anonymized;
-figures are real).
+This repository describes an operations workflow I worked on during an internship. The employer's code, Feishu Base, customer records, and internal documents are private. What is here is a simplified account of the design and the problems it had to handle, not a copy of the production system.
 
-> This is a **case study**, not the source code. The production codebase
-> belongs to the employer and is covered by a confidentiality agreement;
-> per the agreement I publish only anonymized descriptions of what was
-> built and the measured outcomes.
+## The problem
 
-## What the role was
+Project updates lived across several tables and chat threads. Preparing a weekly summary meant checking task ownership, resolving inconsistent status fields, and copying figures into a message. That was slow, and a plausible-looking summary could still be wrong if a parent task and its children were counted twice.
 
-An "AI-native data operations" internship at a Chinese e-commerce media
-agency (KOL/vendor campaign operations on Douyin ecosystem). The job was
-not data entry with AI help — it was **putting AI into the business
-workflow and running it**: designing automations, reviewing their output,
-and reporting numbers the team could act on.
+## What I worked on
 
-## What I built
+- Organized project, task, owner, status, and progress fields so reports could use one consistent definition.
+- Used Python and the Feishu API to turn table records into report drafts and exception lists.
+- Added checks for missing owners, stale records, broken parent-child links, duplicate reporting periods, and values outside their expected range.
+- Kept a human review step before messages went to a group. A generated draft is not treated as a sent report.
+- Logged each run and made failed reads or writes visible rather than silently producing an incomplete report.
 
-### 1. Vendor database on Feishu Base (core asset)
+The [workflow note](docs/workflow.md) shows the boundaries between the Base, the processing script, and human review. A [small local demo](demo/report.py) checks fictional task data and generates a report draft; it does not connect to Feishu or send messages.
 
-Designed and built a Feishu Base tracking **1,436 vendor submissions**
-across **8 campaigns**, used daily by **13 team members**:
+```bash
+python3 -m demo.report demo/tasks.csv
+python3 -m unittest discover -s tests -v
+```
 
-- 8 tables (submission ledger, task assignment with parent/child tasks,
-  campaigns, employees, per-campaign tables) + 1 dashboard + 8 workflows
-- **8 automated workflows**: weekly progress cards pushed to group chat,
-  task distribution, weekly report generation — replacing manual
-  spreadsheet aggregation
-- Weekly progress visualization (6-column campaign overview + employee
-  detail + progress table)
+## What this case does and does not show
 
-**Outcome**: reporting that took half a day of copying between spreadsheets
-became push-button; the team stopped maintaining parallel sheets.
+This is a design and operations case study with a runnable local example, not a production integration. There are no credentials, live Base links, employee details, customer names, or source records here. The example data is invented.
 
-### 2. AI video review pipeline (YOLOv8)
+I have left performance and scale figures out of the public version because the source notes use different definitions for some counts, and several outcome metrics still need a reproducible baseline. I would rather explain the decisions and failure modes clearly than publish numbers I cannot yet defend.
 
-For an AI video-audit project, trained YOLOv8 on **10,000+ labeled frames**
-to detect non-compliant video elements:
+## What changed in my approach
 
-- **93% accuracy** on the validation set
-- Cut defect-identification time by **~60%**
-- Reviewers went from frame-by-frame eyeballing to reviewing flagged
-  candidates
-
-### 3. Automation infrastructure (Feishu API + Python)
-
-Built Python automation on top of Feishu APIs:
-
-- Ingest → review → write-back pipeline with a **106-row manual review
-  workflow** for edge cases the model couldn't decide
-- Multi-round review fix cycles (rules versions updated across review
-  rounds)
-- OCR + parsing utilities for screenshot-based vendor submissions
-
-### 4. Agent setup for the team
-
-Maintained an OpenClaw-based AI assistant the team queries for daily
-operations (submission status, task lookups) — turning the Base into a
-question-answering layer, not just a spreadsheet.
-
-## Numbers summary
-
-| Metric | Value |
-|---|---|
-| Vendor submissions tracked | 1,436 |
-| Campaigns | 8 |
-| Team members using the Base | 13 |
-| Automated workflows | 8 |
-| YOLOv8 validation accuracy | 93% |
-| Defect-identification time saved | ~60% |
-| Manual-review edge-case rows | 106 |
-
-## What I learned
-
-- **AI-native ≠ adding AI**: the leverage came from making the *default
-  path* of the business flow go through the automation, with humans as
-  exception handlers — not from AI bolted onto manual work
-- **Numbers you can defend**: every workflow had a baseline and a measured
-  outcome; a story without numbers is a hobby
-- **Systems outlive tools**: the Feishu Base structure survived tooling
-  changes; the workflows were designed as data contracts, not UI clicks
-
-*Sibling tooling I built alongside this work is public in my other repos
-([stock-loop-lab](https://github.com/HY2MHY/stock-loop-lab),
-[henry-v2](https://github.com/HY2MHY/henry-v2),
-[vault-qa](https://github.com/HY2MHY/vault-qa),
-[agent-compound](https://github.com/HY2MHY/agent-compound)).*
+The useful lesson was to separate producing a report from sending it. Data checks, draft generation, approval, delivery, and logging each need their own state. That made it easier to spot errors and safer to rerun a job without sending the same message twice.

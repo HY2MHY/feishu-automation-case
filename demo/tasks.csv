@@ -1,0 +1,5 @@
+period,task_id,parent_id,owner,status
+2026-W01,T-100,,Alex,in_progress
+2026-W01,T-101,T-100,Alex,done
+2026-W01,T-102,T-100,Morgan,todo
+2026-W01,T-200,,Sam,done
